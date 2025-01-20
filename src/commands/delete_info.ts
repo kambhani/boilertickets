@@ -17,37 +17,44 @@ const data = new SlashCommandBuilder()
 	.setDescription("Delete your information from the database");
 
 const execute = async (interaction: ChatInputCommandInteraction) => {
-	const { guild, member } = interaction;
-
-	invariant(guild, "Guild must be defined!");
-	invariant(member instanceof GuildMember, "Member must be valid!");
-
-	// Get the user to remove
-	const users = await db
-		.select()
-		.from(schema.user)
-		.where(eq(schema.user.id, BigInt(member.id)))
-		.limit(1);
-
-	// If the user doesn't exist in the database, return
-	if (users.length === 0) {
-		await interaction.reply({
-			content: "You are not present in the database!",
-			ephemeral: true,
-		});
-		return;
-	}
-
-	// Remove the user from the user table
-	await removeUser(guild, users[0].id);
-
-	// Remove the user email from the database
-	await db.delete(schema.email).where(eq(schema.email.email, users[0].email));
-
-	await interaction.reply({
-		content: "Your information has been removed from the database",
+	await interaction.deferReply({
 		ephemeral: true,
 	});
+
+	try {
+		const { guild, member } = interaction;
+
+		invariant(guild, "Guild must be defined!");
+		invariant(member instanceof GuildMember, "Member must be valid!");
+
+		// Get the user to remove
+		const users = await db
+			.select()
+			.from(schema.user)
+			.where(eq(schema.user.id, BigInt(member.id)))
+			.limit(1);
+
+		// If the user doesn't exist in the database, return
+		if (users.length === 0) {
+			await interaction.reply({
+				content: "You are not present in the database!",
+				ephemeral: true,
+			});
+			return;
+		}
+
+		// Remove the user from the user table
+		await removeUser(guild, users[0].id);
+
+		// Remove the user email from the database
+		await db.delete(schema.email).where(eq(schema.email.email, users[0].email));
+
+		await interaction.editReply(
+			"Your information has been removed from the database",
+		);
+	} catch (err) {
+		await interaction.editReply(`${err}`);
+	}
 };
 
 export { cooldown, data, execute };

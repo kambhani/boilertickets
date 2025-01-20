@@ -22,30 +22,36 @@ const data = new SlashCommandBuilder()
 	});
 
 const execute = async (interaction: ChatInputCommandInteraction) => {
-	const { guild, member } = interaction;
+	await interaction.deferReply({
+		ephemeral: true,
+	});
 
-	invariant(guild, "Guild must be defined!");
-	invariant(member instanceof GuildMember, "Member must be valid!");
+	try {
+		const { guild, member } = interaction;
 
-	const queried_user = interaction.options.getUser("user");
-	invariant(queried_user instanceof User, "Queried user must be defined!");
+		invariant(guild, "Guild must be defined!");
+		invariant(member instanceof GuildMember, "Member must be valid!");
 
-	const users = await db
-		.select()
-		.from(schema.user)
-		.where(eq(schema.user.id, BigInt(queried_user.id)))
-		.limit(1);
+		const queried_user = interaction.options.getUser("user");
+		invariant(queried_user instanceof User, "Queried user must be defined!");
 
-	if (users.length > 0) {
-		await interaction.reply({
-			content: `User ${queried_user} has email ${users[0].email}`,
-			ephemeral: true,
-		});
-	} else {
-		await interaction.reply({
-			content: `User ${queried_user} does not exist in the database`,
-			ephemeral: true,
-		});
+		const users = await db
+			.select()
+			.from(schema.user)
+			.where(eq(schema.user.id, BigInt(queried_user.id)))
+			.limit(1);
+
+		if (users.length > 0) {
+			await interaction.editReply(
+				`User ${queried_user} has email ${users[0].email}`,
+			);
+		} else {
+			await interaction.editReply(
+				`User ${queried_user} does not exist in the database`,
+			);
+		}
+	} catch (err) {
+		await interaction.editReply(`${err}`);
 	}
 };
 

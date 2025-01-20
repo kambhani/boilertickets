@@ -10,7 +10,7 @@ import * as schema from "~/db/schema";
 import { eq } from "drizzle-orm";
 import invariant from "tiny-invariant";
 
-const cooldown = 86400;
+const cooldown = 60;
 
 const data = new SlashCommandBuilder()
 	.setName("purge_users")
@@ -25,34 +25,39 @@ const data = new SlashCommandBuilder()
 	.setDMPermission(false);
 
 const execute = async (interaction: ChatInputCommandInteraction) => {
-	const { guild, member } = interaction;
-
-	invariant(guild, "Guild must be defined!");
-	invariant(member instanceof GuildMember, "Member must be valid!");
-
-	const include_banned_emails = interaction.options.getBoolean(
-		"include_banned_emails",
-	);
-	invariant(
-		include_banned_emails !== null,
-		"include_banned_emails must be defined!",
-	);
-
-	// Delete all users from the table
-	await db.delete(schema.user);
-
-	// Delete all emails from the database
-	// We may keep banned emails if the user wants to
-	if (include_banned_emails) {
-		await db.delete(schema.email);
-	} else {
-		await db.delete(schema.email).where(eq(schema.email.banned, false));
-	}
-
-	await interaction.reply({
-		content: "Database purged!",
+	await interaction.deferReply({
 		ephemeral: true,
 	});
+
+	try {
+		const { guild, member } = interaction;
+
+		invariant(guild, "Guild must be defined!");
+		invariant(member instanceof GuildMember, "Member must be valid!");
+
+		const include_banned_emails = interaction.options.getBoolean(
+			"include_banned_emails",
+		);
+		invariant(
+			include_banned_emails !== null,
+			"include_banned_emails must be defined!",
+		);
+
+		// Delete all users from the table
+		await db.delete(schema.user);
+
+		// Delete all emails from the database
+		// We may keep banned emails if the user wants to
+		if (include_banned_emails) {
+			await db.delete(schema.email);
+		} else {
+			await db.delete(schema.email).where(eq(schema.email.banned, false));
+		}
+
+		await interaction.editReply("Database purged");
+	} catch (err) {
+		await interaction.editReply(`${err}`);
+	}
 };
 
 export { cooldown, data, execute };
