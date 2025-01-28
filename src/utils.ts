@@ -31,19 +31,20 @@ export const addUser = async (guild: Guild, id: bigint, email: string) => {
 	const member = guild.members.cache.get(id.toString());
 	if (!member) return;
 
-	// Add their role
-	if (!member.roles.cache.has(process.env.ROLE_ID)) {
-		await member.roles.add(process.env.ROLE_ID);
-	}
-
 	// Remove the current user associated with the email address
+	// If we're assigning back to the same user, don't remove the role
 	const cur_user = await db
 		.select()
 		.from(schema.user)
 		.where(eq(schema.user.email, email))
 		.limit(1);
-	if (cur_user.length > 0) {
+	if (cur_user.length > 0 && cur_user[0].id !== id) {
 		await removeUser(guild, cur_user[0].id);
+	}
+
+	// Add their role
+	if (!member.roles.cache.has(process.env.ROLE_ID)) {
+		await member.roles.add(process.env.ROLE_ID);
 	}
 
 	// Add the user from the database

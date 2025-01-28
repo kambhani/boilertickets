@@ -3,7 +3,8 @@
 	"module": "index.ts",
 	"type": "module",
 	"scripts": {
-		"start": "bun run src/index.ts",
+		"start": "node --env-file=.env dist/index.js",
+		"dev": "bun run src/index.ts",
 		"build": "bun run tsc && bun run tsc-alias",
 		"deploy": "bun run src/deploy-commands.ts",
 		"db:generate": "drizzle-kit generate --config ./src/db/drizzle.config.ts",
